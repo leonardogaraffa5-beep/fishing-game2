@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Fishing Game</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #6ec6ff;
+        font-family: Arial;
+        user-select: none;
+    }
+
+    #score {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 24px;
+        color: #fff;
+        background: rgba(0,0,0,0.3);
+        padding: 10px 15px;
+        border-radius: 8px;
+    }
+
+    canvas {
+        display: block;
+    }
+</style>
+</head>
+<body>
+
+<div id="score">Score: 0</div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+// ----- Canvas Setup -----
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// ----- Game Variables -----
+let score = 0;
+let hook = { x: canvas.width/2, y: -50, size: 10, speed: 8, casted: false };
+let fishList = [];
+
+// ----- Create Fish -----
+function createFish() {
+    const size = Math.random() * 30 + 20;
+    fishList.push({
+        x: -size,
+        y: Math.random() * (canvas.height - 100) + 50,
+        size: size,
+        speed: Math.random() * 2 + 1
+    });
+}
+
+// Add fish every second
+setInterval(createFish, 1000);
+
+// ----- Mouse Click Cast -----
+canvas.addEventListener("click", (e) => {
+    if (!hook.casted) {
+        hook.x = e.clientX;
+        hook.y = -20;
+        hook.casted = true;
+    }
+});
+
+// ----- Game Loop -----
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw water gradient
+    let gradient = ctx.createLinearGradient(0,0,0,canvas.height);
+    gradient.addColorStop(0,"#6ec6ff");
+    gradient.addColorStop(1,"#004a7f");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // ---- Draw Fish ----
+    fishList.forEach((fish, index) => {
+        fish.x += fish.speed;
+
+        // Draw fish body
+        ctx.fillStyle = "#ff914d";
+        ctx.beginPath();
+        ctx.ellipse(fish.x, fish.y, fish.size, fish.size/2, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // Remove if off screen
+        if (fish.x > canvas.width + fish.size) {
+            fishList.splice(index, 1);
+        }
+
+        // Collision with hook
+        if (hook.casted &&
+            Math.abs(hook.x - fish.x) < fish.size &&
+            Math.abs(hook.y - fish.y) < fish.size/2) {
+            score++;
+            document.getElementById("score").innerText = "Score: " + score;
+            fishList.splice(index, 1);
+        }
+    });
+
+    // ---- Draw Hook ----
+    if (hook.casted) {
+        hook.y += hook.speed;
+
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+
+        // Line
+        ctx.beginPath();
+        ctx.moveTo(hook.x, 0);
+        ctx.lineTo(hook.x, hook.y);
+        ctx.stroke();
+
+        // Hook
+        ctx.beginPath();
+        ctx.arc(hook.x, hook.y, hook.size, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Reset if off screen bottom
+        if (hook.y > canvas.height) {
+            hook.casted = false;
+        }
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
