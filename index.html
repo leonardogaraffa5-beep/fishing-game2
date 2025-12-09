@@ -2,225 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Fishing Game</title>
-<style>
-    body {
-        margin: 0;
-        overflow: hidden;
-        background: #6ec6ff;
-        font-family: Arial;
-        user-select: none;
-    }
-
-    #ui {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        background: rgba(0,0,0,0.5);
-        color: white;
-        font-size: 32px;
-        z-index: 5;
-    }
-
-    .button {
-        background: #ff9f43;
-        padding: 15px 30px;
-        border-radius: 10px;
-        cursor: pointer;
-        margin-top: 20px;
-        font-size: 28px;
-    }
-    .button:hover {
-        background: #ffb86c;
-    }
-
-    #score {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        font-size: 24px;
-        color: #fff;
-        background: rgba(0,0,0,0.3);
-        padding: 10px 15px;
-        border-radius: 8px;
-        display: none;
-    }
-
-    canvas { display: block; }
-</style>
+<title>Fishing Game Deluxe</title>
+<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<!-- Start Menu -->
 <div id="ui">
-    <div>🎣 Fishing Game 🎣</div>
-    <div style="margin-top:25px; font-size:22px;">Choose Difficulty</div>
-    <div class="button" onclick="startGame('easy')">Easy</div>
-    <div class="button" onclick="startGame('normal')">Normal</div>
-    <div class="button" onclick="startGame('hard')">Hard</div>
+    <div id="title">🎣 Fishing Game Deluxe 🎣</div>
+    <div id="subtitle">Choose Difficulty</div>
+
+    <button class="button" onclick="startGame('easy')">Easy</button>
+    <button class="button" onclick="startGame('normal')">Normal</button>
+    <button class="button" onclick="startGame('hard')">Hard</button>
+
+    <div id="upgrades">
+        <h2>Rod Upgrades</h2>
+        <button class="upgradeBtn" onclick="upgradeRod()">Upgrade Rod (Cost: 5 points)</button>
+    </div>
 </div>
 
-<div id="score">Score: 0</div>
+<div id="score">Score: 0 | High Score: 0</div>
+<button id="soundToggle" onclick="toggleSound()">🔊</button>
+
 <canvas id="gameCanvas"></canvas>
 
-<script>
-// ----- Canvas Setup -----
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-canvas.width = innerWidth;
-canvas.height = innerHeight;
-
-// ----- Game Variables -----
-let diff = "normal";
-let fishList = [];
-let score = 0;
-let gameRunning = false;
-
-// Hook Object
-const hook = {
-    x: canvas.width/2,
-    y: -50,
-    size: 10,
-    speed: 8,
-    casted: false
-};
-
-// Load Fish Sprite
-const fishSprite = new Image();
-fishSprite.src = 
-"https://raw.githubusercontent.com/mdn/content/main/files/en-us/learn/javascript/objects/drawing_graphics/fish.png";
-
-// Sound Effects
-const splashSound = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_2c2b8c1e11.mp3?filename=water-splash-70702.mp3");
-const catchSound = new Audio("https://cdn.pixabay.com/download/audio/2021/08/04/audio_40b9a63a64.mp3?filename=click-21156.mp3");
-
-// Difficulty Settings
-const difficulty = {
-    easy:   { fishSpeed: 1.3, spawnRate: 1600 },
-    normal: { fishSpeed: 2.0, spawnRate: 1100 },
-    hard:   { fishSpeed: 3.2, spawnRate: 700  }
-};
-
-// ----- START GAME -----
-function startGame(level) {
-    diff = level;
-    score = 0;
-    fishList = [];
-    gameRunning = true;
-
-    document.getElementById("ui").style.display = "none";
-    document.getElementById("score").style.display = "block";
-
-    document.getElementById("score").innerText = "Score: 0";
-
-    splashSound.play();
-
-    setInterval(() => {
-        if (gameRunning) spawnFish();
-    }, difficulty[diff].spawnRate);
-}
-
-// ----- Spawn Fish -----
-function spawnFish() {
-    const size = Math.random() * 40 + 30;
-    fishList.push({
-        x: -size,
-        y: Math.random() * (canvas.height - 100) + 50,
-        size,
-        speed: Math.random() * 1 + difficulty[diff].fishSpeed,
-        frame: 0
-    });
-}
-
-// ----- Mouse Click Cast -----
-canvas.addEventListener("click", (e) => {
-    if (!gameRunning) return;
-    if (!hook.casted) {
-        hook.x = e.clientX;
-        hook.y = -20;
-        hook.casted = true;
-    }
-});
-
-// ----- GAME LOOP -----
-function gameLoop() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    // Background gradient (water)
-    let g = ctx.createLinearGradient(0,0,0,canvas.height);
-    g.addColorStop(0,"#6ec6ff");
-    g.addColorStop(1,"#004a7f");
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    if (gameRunning) updateFish();
-    if (gameRunning) updateHook();
-
-    requestAnimationFrame(gameLoop);
-}
-gameLoop();
-
-// ----- Fish Logic -----
-function updateFish() {
-    fishList.forEach((fish, i) => {
-        fish.x += fish.speed;
-        fish.frame = (fish.frame + 0.1) % 4;
-
-        // Draw sprite
-        ctx.drawImage(
-            fishSprite,
-            Math.floor(fish.frame) * 32, 0, 32, 32,
-            fish.x, fish.y, fish.size, fish.size
-        );
-
-        // Remove if off-screen
-        if (fish.x > canvas.width + fish.size) {
-            fishList.splice(i,1);
-        }
-
-        // Check Catch
-        if (hook.casted &&
-            Math.abs(hook.x - fish.x) < fish.size/1.2 &&
-            Math.abs(hook.y - fish.y) < fish.size/1.2) {
-
-            score++;
-            catchSound.play();
-            document.getElementById("score").innerText = "Score: " + score;
-
-            fishList.splice(i,1);
-        }
-    });
-}
-
-// ----- Hook Logic -----
-function updateHook() {
-    if (hook.casted) {
-        hook.y += hook.speed;
-
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 2;
-
-        // Line
-        ctx.beginPath();
-        ctx.moveTo(hook.x, 0);
-        ctx.lineTo(hook.x, hook.y);
-        ctx.stroke();
-
-        // Hook
-        ctx.beginPath();
-        ctx.arc(hook.x, hook.y, hook.size, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Reset when out of water
-        if (hook.y > canvas.height) {
-            hook.casted = false;
-        }
-    }
-}
-</script>
+<script src="game.js"></script>
 </body>
 </html>
